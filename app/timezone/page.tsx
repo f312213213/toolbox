@@ -242,7 +242,7 @@ export default function TimezonePage() {
   const [minutes, setMinutes] = useState<string>("00")
   const [sourceTimezone, setSourceTimezone] = useState<string>("local")
   const [targetTimezones, setTargetTimezones] = useState<string[]>([])
-  const [availableTimezone, setAvailableTimezone] = useState<string>("utc")
+  const [availableTimezone, setAvailableTimezone] = useState<string>("")
   const [sourceSearch, setSourceSearch] = useState<string>("")
   const [targetSearch, setTargetSearch] = useState<string>("")
   const [isSourceSearching, setIsSourceSearching] = useState<boolean>(false)
