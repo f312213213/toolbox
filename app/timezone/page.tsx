@@ -272,7 +272,7 @@ export default function TimezonePage() {
 
   // Save target timezones to localStorage whenever they change
   useEffect(() => {
-    if (targetTimezones.length > 0 || localStorage.getItem("targetTimezones")) {
+    if (targetTimezones.length > 0) {
       localStorage.setItem("targetTimezones", JSON.stringify(targetTimezones))
     } 
   }, [targetTimezones])
@@ -448,6 +448,7 @@ export default function TimezonePage() {
                 variant="ghost"
                 onClick={() => {
                   const now = new Date()
+                  setSelectedDate(now)
                   setHours(String(now.getHours()).padStart(2, "0"))
                   setMinutes(String(now.getMinutes()).padStart(2, "0"))
                 }}
