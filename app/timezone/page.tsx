@@ -244,9 +244,9 @@ export default function TimezonePage() {
   const [availableTimezone, setAvailableTimezone] = useState<string>("utc")
 
   // Initialize with current time and load saved timezones after mount
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const now = new Date()
+  // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDate(now)
     setHours(String(now.getHours()).padStart(2, "0"))
     setMinutes(String(now.getMinutes()).padStart(2, "0"))
