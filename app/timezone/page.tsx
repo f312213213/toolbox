@@ -5,10 +5,10 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxGroup, ComboboxLabel, ComboboxSeparator } from "@/components/ui/combobox"
 import { Clock, Plus, X, Calendar as CalendarIcon, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -243,6 +243,10 @@ export default function TimezonePage() {
   const [sourceTimezone, setSourceTimezone] = useState<string>("local")
   const [targetTimezones, setTargetTimezones] = useState<string[]>([])
   const [availableTimezone, setAvailableTimezone] = useState<string>("utc")
+  const [sourceSearch, setSourceSearch] = useState<string>("")
+  const [targetSearch, setTargetSearch] = useState<string>("")
+  const [isSourceSearching, setIsSourceSearching] = useState<boolean>(false)
+  const [isTargetSearching, setIsTargetSearching] = useState<boolean>(false)
 
   // Initialize with current time and load saved timezones after mount
   useEffect(() => {
@@ -338,6 +342,21 @@ export default function TimezonePage() {
 
   const getTimezoneById = (id: string) => {
     return TIMEZONES.find((tz) => tz.id === id)
+  }
+
+  const filterTimezones = (search: string) => {
+    if (!search) return TIMEZONE_GROUPS
+
+    const searchLower = search.toLowerCase()
+    return TIMEZONE_GROUPS.map((group) => ({
+      ...group,
+      timezones: group.timezones.filter(
+        (tz) =>
+          tz.label.toLowerCase().includes(searchLower) ||
+          tz.value.toLowerCase().includes(searchLower) ||
+          getTimezoneOffset(tz.value).toLowerCase().includes(searchLower)
+      ),
+    })).filter((group) => group.timezones.length > 0)
   }
 
   return (
@@ -441,33 +460,53 @@ export default function TimezonePage() {
 
           <div className="space-y-2">
             <label className="text-xs font-medium">Source Timezone</label>
-            <Select value={sourceTimezone} onValueChange={setSourceTimezone}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select timezone">
-                  {sourceTimezone && getTimezoneById(sourceTimezone) && formatTimezoneLabel(
-                    getTimezoneById(sourceTimezone)!
+            <Combobox
+              value={sourceTimezone}
+              onValueChange={(value) => {
+                setSourceTimezone(value || "local")
+                setSourceSearch("")
+                setIsSourceSearching(false)
+              }}
+            >
+              <ComboboxInput
+                placeholder="Search timezone..."
+                value={isSourceSearching ? sourceSearch : (sourceTimezone ? getTimezoneById(sourceTimezone)?.label : "")}
+                onChange={(e) => {
+                  setSourceSearch(e.target.value)
+                  setIsSourceSearching(true)
+                }}
+                onFocus={() => setIsSourceSearching(true)}
+                onBlur={() => setIsTargetSearching(false)}
+                className="w-full"
+                showTrigger
+              />
+              <ComboboxContent>
+                <ComboboxList>
+                  {filterTimezones(sourceSearch).length === 0 ? (
+                    <div className="text-muted-foreground py-6 text-center text-xs">
+                      No timezone found
+                    </div>
+                  ) : (
+                    filterTimezones(sourceSearch).map((group, groupIndex) => (
+                      <ComboboxGroup key={group.label}>
+                        {groupIndex > 0 && <ComboboxSeparator />}
+                        <ComboboxLabel>{group.label}</ComboboxLabel>
+                        {group.timezones.map((tz) => (
+                          <ComboboxItem key={tz.id} value={tz.id} className="pr-8">
+                            <div className="flex items-center justify-between gap-2 w-full">
+                              <span>{tz.label}</span>
+                              <Badge variant="outline" className="ml-1">
+                                {getTimezoneOffset(tz.value)}
+                              </Badge>
+                            </div>
+                          </ComboboxItem>
+                        ))}
+                      </ComboboxGroup>
+                    ))
                   )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONE_GROUPS.map((group, groupIndex) => (
-                  <SelectGroup key={group.label}>
-                    {groupIndex > 0 && <SelectSeparator />}
-                    <SelectLabel>{group.label}</SelectLabel>
-                    {group.timezones.map((tz) => (
-                      <SelectItem key={tz.id} value={tz.id}>
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span>{tz.label}</span>
-                          <Badge variant="outline" className="ml-1">
-                            {getTimezoneOffset(tz.value)}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
         </CardContent>
       </Card>
@@ -479,43 +518,66 @@ export default function TimezonePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
-            <Select
+            <Combobox
               value={availableTimezone}
-              onValueChange={setAvailableTimezone}
+              onValueChange={(value) => {
+                if (value) setAvailableTimezone(value)
+                setTargetSearch("")
+                setIsTargetSearching(false)
+              }}
             >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select timezone to add">
-                  {availableTimezone && getTimezoneById(availableTimezone) && formatTimezoneLabel(
-                    getTimezoneById(availableTimezone)!
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONE_GROUPS.map((group, groupIndex) => {
-                  const availableTimezones = group.timezones.filter(
-                    (tz) => !targetTimezones.includes(tz.id)
-                  )
-                  if (availableTimezones.length === 0) return null
+              <ComboboxInput
+                placeholder="Search timezone to add..."
+                value={isTargetSearching ? targetSearch : (availableTimezone ? getTimezoneById(availableTimezone)?.label : "")}
+                onChange={(e) => {
+                  setTargetSearch(e.target.value)
+                  setIsTargetSearching(true)
+                }}
+                onFocus={() => setIsTargetSearching(true)}
+                onBlur={() => setIsTargetSearching(false)}
+                className="flex-1"
+                showTrigger
+              />
+              <ComboboxContent>
+                <ComboboxList>
+                  {(() => {
+                    const filteredGroups = filterTimezones(targetSearch)
+                      .map((group) => ({
+                        ...group,
+                        timezones: group.timezones.filter(
+                          (tz) => !targetTimezones.includes(tz.id)
+                        ),
+                      }))
+                      .filter((group) => group.timezones.length > 0)
 
-                  return (
-                    <SelectGroup key={group.label}>
-                      {groupIndex > 0 && <SelectSeparator />}
-                      <SelectLabel>{group.label}</SelectLabel>
-                      {availableTimezones.map((tz) => (
-                        <SelectItem key={tz.id} value={tz.id}>
-                          <div className="flex items-center justify-between gap-2 w-full">
-                            <span>{tz.label}</span>
-                            <Badge variant="outline" className="ml-1">
-                              {getTimezoneOffset(tz.value)}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+                    if (filteredGroups.length === 0) {
+                      return (
+                        <div className="text-muted-foreground py-6 text-center text-xs">
+                          No timezone found
+                        </div>
+                      )
+                    }
+
+                    return filteredGroups.map((group, groupIndex) => (
+                      <ComboboxGroup key={group.label}>
+                        {groupIndex > 0 && <ComboboxSeparator />}
+                        <ComboboxLabel>{group.label}</ComboboxLabel>
+                        {group.timezones.map((tz) => (
+                          <ComboboxItem key={tz.id} value={tz.id} className="pr-8">
+                            <div className="flex items-center justify-between gap-2 w-full">
+                              <span>{tz.label}</span>
+                              <Badge variant="outline" className="ml-1">
+                                {getTimezoneOffset(tz.value)}
+                              </Badge>
+                            </div>
+                          </ComboboxItem>
+                        ))}
+                      </ComboboxGroup>
+                    ))
+                  })()}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
             <Button onClick={addTimezone} variant="outline">
               <Plus className="size-4" />
               Add
@@ -534,7 +596,7 @@ export default function TimezonePage() {
               <Card key={tzId} size="sm">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between gap-2">
-                    <span className="text-sm flex-1">
+                    <span className="text-lg flex-1">
                       {timezoneData?.label || tzId}
                     </span>
                     <div className="flex items-center gap-1.5">
