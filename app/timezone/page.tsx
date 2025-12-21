@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -235,13 +235,42 @@ const TIMEZONE_GROUPS = [
 ]
 
 export default function TimezonePage() {
-  const now = new Date()
-  const [selectedDate, setSelectedDate] = useState<Date>(now)
-  const [hours, setHours] = useState<string>(String(now.getHours()).padStart(2, "0"))
-  const [minutes, setMinutes] = useState<string>(String(now.getMinutes()).padStart(2, "0"))
+  // Use fixed initial values to avoid hydration mismatch
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date("2024-01-01"))
+  const [hours, setHours] = useState<string>("12")
+  const [minutes, setMinutes] = useState<string>("00")
   const [sourceTimezone, setSourceTimezone] = useState<string>("local")
   const [targetTimezones, setTargetTimezones] = useState<string[]>([])
   const [availableTimezone, setAvailableTimezone] = useState<string>("utc")
+
+  // Initialize with current time and load saved timezones after mount
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    const now = new Date()
+    setSelectedDate(now)
+    setHours(String(now.getHours()).padStart(2, "0"))
+    setMinutes(String(now.getMinutes()).padStart(2, "0"))
+
+    // Load saved timezones from localStorage
+    const saved = localStorage.getItem("targetTimezones")
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          setTargetTimezones(parsed)
+        }
+      } catch (error) {
+        console.error("Failed to parse saved timezones:", error)
+      }
+    }
+  }, [])
+
+  // Save target timezones to localStorage whenever they change
+  useEffect(() => {
+    if (targetTimezones.length > 0 || localStorage.getItem("targetTimezones")) {
+      localStorage.setItem("targetTimezones", JSON.stringify(targetTimezones))
+    } 
+  }, [targetTimezones])
 
   const addTimezone = () => {
     if (availableTimezone && !targetTimezones.includes(availableTimezone)) {
@@ -332,27 +361,28 @@ export default function TimezonePage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-medium">Date & Time</label>
-            <div className="flex gap-2 items-center flex-wrap">
+            <div className="flex gap-1.5 items-center">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "justify-start text-left font-normal flex-1 min-w-[200px]",
+                      "justify-start text-left font-normal flex-1 min-w-0",
                       !selectedDate && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 size-4" />
-                    {selectedDate ? (
-                      selectedDate.toLocaleDateString("en-US", {
-                        weekday: "short",
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    <CalendarIcon className="mr-1.5 size-4 shrink-0" />
+                    <span className="truncate">
+                      {selectedDate ? (
+                        selectedDate.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      ) : (
+                        "Pick a date"
+                      )}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -376,10 +406,10 @@ export default function TimezonePage() {
                     setHours(String(val).padStart(2, "0"))
                   }
                 }}
-                className="w-16 text-center"
+                className="w-14 text-center shrink-0"
                 placeholder="HH"
               />
-              <span className="text-muted-foreground">:</span>
+              <span className="text-muted-foreground shrink-0">:</span>
               <Input
                 type="number"
                 min="0"
@@ -391,16 +421,17 @@ export default function TimezonePage() {
                     setMinutes(String(val).padStart(2, "0"))
                   }
                 }}
-                className="w-16 text-center"
+                className="w-14 text-center shrink-0"
                 placeholder="MM"
               />
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   const now = new Date()
                   setHours(String(now.getHours()).padStart(2, "0"))
                   setMinutes(String(now.getMinutes()).padStart(2, "0"))
                 }}
+                className="shrink-0"
               >
                 Now
               </Button>
@@ -521,7 +552,7 @@ export default function TimezonePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-base font-mono">{convertTime(tzId)}</div>
+                  <div className="text-base">{convertTime(tzId)}</div>
                 </CardContent>
               </Card>
             )
