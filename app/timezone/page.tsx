@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSepa
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Clock, Plus, X, Calendar as CalendarIcon } from "lucide-react"
+import { Clock, Plus, X, Calendar as CalendarIcon, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // Timezones organized by region with major cities
@@ -567,6 +568,16 @@ export default function TimezonePage() {
           </Card>
         )}
       </div>
+
+      {/* Floating back to home button */}
+      <Link href="/">
+        <Button
+          variant="outline"
+          className="fixed bottom-6 right-6"
+        >
+          Back to Home
+        </Button>
+      </Link>
     </div>
   )
 }
