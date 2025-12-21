@@ -240,11 +240,7 @@ export default function TimezonePage() {
   const [hours, setHours] = useState<string>(String(now.getHours()).padStart(2, "0"))
   const [minutes, setMinutes] = useState<string>(String(now.getMinutes()).padStart(2, "0"))
   const [sourceTimezone, setSourceTimezone] = useState<string>("local")
-  const [targetTimezones, setTargetTimezones] = useState<string[]>([
-    "us-ny",
-    "gb-lon",
-    "jp-tyo",
-  ])
+  const [targetTimezones, setTargetTimezones] = useState<string[]>([])
   const [availableTimezone, setAvailableTimezone] = useState<string>("utc")
 
   const addTimezone = () => {
@@ -493,25 +489,6 @@ export default function TimezonePage() {
               Add
             </Button>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {targetTimezones.map((tzId) => {
-              const timezoneData = getTimezoneById(tzId)
-              return (
-                <Badge key={tzId} variant="outline" className="pr-1">
-                  {timezoneData ? formatTimezoneLabel(timezoneData) : tzId}
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => removeTimezone(tzId)}
-                    className="ml-1 h-4 w-4"
-                  >
-                    <X className="size-3" />
-                  </Button>
-                </Badge>
-              )
-            })}
-          </div>
         </CardContent>
       </Card>
 
@@ -524,13 +501,23 @@ export default function TimezonePage() {
             return (
               <Card key={tzId} size="sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="text-sm">
+                  <CardTitle className="flex items-center justify-between gap-2">
+                    <span className="text-sm flex-1">
                       {timezoneData?.label || tzId}
                     </span>
-                    <Badge variant="secondary" className="shrink-0">
-                      {offset}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="shrink-0">
+                        {offset}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => removeTimezone(tzId)}
+                        className="shrink-0"
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
