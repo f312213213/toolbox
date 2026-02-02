@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxGroup, ComboboxLabel, ComboboxSeparator } from "@/components/ui/combobox"
-import { Clock, Plus, X, Calendar as CalendarIcon, Home } from "lucide-react"
+import { Clock, Plus, X, Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // Timezones organized by region with major cities
@@ -274,7 +274,9 @@ export default function TimezonePage() {
   useEffect(() => {
     if (targetTimezones.length > 0) {
       localStorage.setItem("targetTimezones", JSON.stringify(targetTimezones))
-    } 
+    } else {
+      localStorage.removeItem("targetTimezones")
+    }
   }, [targetTimezones])
 
   const addTimezone = () => {
@@ -287,12 +289,62 @@ export default function TimezonePage() {
     setTargetTimezones(targetTimezones.filter((t) => t !== tz))
   }
 
-  const getInputDateTime = () => {
-    const dateTime = new Date(selectedDate)
-    dateTime.setHours(parseInt(hours) || 0)
-    dateTime.setMinutes(parseInt(minutes) || 0)
-    dateTime.setSeconds(0)
-    return dateTime
+  const getInputDateTimeInUTC = () => {
+    // Get the source timezone
+    const sourceTz = getTimezoneById(sourceTimezone)
+    if (!sourceTz) return new Date()
+
+    // Create a date string in ISO format for the selected date/time
+    const year = selectedDate.getFullYear()
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0")
+    const day = String(selectedDate.getDate()).padStart(2, "0")
+    const h = String(parseInt(hours) || 0).padStart(2, "0")
+    const m = String(parseInt(minutes) || 0).padStart(2, "0")
+
+    // Format: "2024-01-15T10:30:00"
+    const dateTimeStr = `${year}-${month}-${day}T${h}:${m}:00`
+
+    // Get the offset for the source timezone at that date/time
+    // We need to find out what UTC time corresponds to the input time in the source timezone
+    const tempDate = new Date(dateTimeStr)
+    
+    // Get the source timezone's offset by formatting and parsing
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: sourceTz.value,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+    
+    // Format tempDate in source timezone to see the offset difference
+    const parts = formatter.formatToParts(tempDate)
+    const getPart = (type: string) => parts.find(p => p.type === type)?.value || "0"
+    
+    const tzYear = parseInt(getPart("year"))
+    const tzMonth = parseInt(getPart("month"))
+    const tzDay = parseInt(getPart("day"))
+    const tzHour = parseInt(getPart("hour"))
+    const tzMinute = parseInt(getPart("minute"))
+    
+    // Calculate the difference between what we want and what tempDate shows in source tz
+    const wantedMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0)
+    const gotMinutes = tzHour * 60 + tzMinute
+    const diffMinutes = wantedMinutes - gotMinutes
+    
+    // Also account for date differences
+    const wantedDate = new Date(year, selectedDate.getMonth(), parseInt(String(selectedDate.getDate())))
+    const gotDate = new Date(tzYear, tzMonth - 1, tzDay)
+    const dayDiffMs = wantedDate.getTime() - gotDate.getTime()
+    const dayDiffMinutes = dayDiffMs / (1000 * 60)
+    
+    // Adjust tempDate by the difference
+    const adjustedDate = new Date(tempDate.getTime() + (diffMinutes + dayDiffMinutes) * 60 * 1000)
+    
+    return adjustedDate
   }
 
   const convertTime = (tzId: string) => {
@@ -300,7 +352,7 @@ export default function TimezonePage() {
       const timezone = getTimezoneById(tzId)
       if (!timezone) return "Invalid timezone"
 
-      const dateTime = getInputDateTime()
+      const dateTime = getInputDateTimeInUTC()
 
       // Format for the target timezone
       const options: Intl.DateTimeFormatOptions = {
@@ -333,11 +385,6 @@ export default function TimezonePage() {
     } catch (error) {
       return ""
     }
-  }
-
-  const formatTimezoneLabel = (tz: { id: string; label: string; value: string }) => {
-    const offset = getTimezoneOffset(tz.value)
-    return `${tz.label} (${offset})`
   }
 
   const getTimezoneById = (id: string) => {
@@ -421,10 +468,18 @@ export default function TimezonePage() {
                 max="23"
                 value={hours}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (val >= 0 && val <= 23) {
+                  const rawVal = e.target.value
+                  if (rawVal === "") {
+                    setHours("")
+                    return
+                  }
+                  const val = parseInt(rawVal)
+                  if (!isNaN(val) && val >= 0 && val <= 23) {
                     setHours(String(val).padStart(2, "0"))
                   }
+                }}
+                onBlur={() => {
+                  if (hours === "") setHours("00")
                 }}
                 className="w-14 text-center shrink-0"
                 placeholder="HH"
@@ -436,10 +491,18 @@ export default function TimezonePage() {
                 max="59"
                 value={minutes}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (val >= 0 && val <= 59) {
+                  const rawVal = e.target.value
+                  if (rawVal === "") {
+                    setMinutes("")
+                    return
+                  }
+                  const val = parseInt(rawVal)
+                  if (!isNaN(val) && val >= 0 && val <= 59) {
                     setMinutes(String(val).padStart(2, "0"))
                   }
+                }}
+                onBlur={() => {
+                  if (minutes === "") setMinutes("00")
                 }}
                 className="w-14 text-center shrink-0"
                 placeholder="MM"
@@ -477,7 +540,7 @@ export default function TimezonePage() {
                   setIsSourceSearching(true)
                 }}
                 onFocus={() => setIsSourceSearching(true)}
-                onBlur={() => setIsTargetSearching(false)}
+                onBlur={() => setIsSourceSearching(false)}
                 className="w-full"
                 showTrigger
               />
