@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,12 @@ export default function Base64Page() {
   const [lastOperation, setLastOperation] = useState<"encode" | "decode" | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<boolean>(false)
+  const [isMac, setIsMac] = useState<boolean>(false)
+
+  // Detect OS on mount
+  useEffect(() => {
+    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0)
+  }, [])
 
   const encode = useCallback(() => {
     try {
@@ -86,7 +92,8 @@ export default function Base64Page() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && e.ctrlKey) {
+      const modifierKey = e.metaKey || e.ctrlKey
+      if (e.key === "Enter" && modifierKey && !e.shiftKey) {
         e.preventDefault()
         encode()
       } else if (e.key === "Enter" && e.shiftKey) {
@@ -96,6 +103,8 @@ export default function Base64Page() {
     },
     [encode, decode]
   )
+
+  const modKey = isMac ? "⌘" : "Ctrl"
 
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6">
@@ -128,7 +137,7 @@ export default function Base64Page() {
             <Button onClick={encode} className="flex-1 sm:flex-none">
               Encode
               <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">
-                Ctrl+Enter
+                {modKey}+Enter
               </Badge>
             </Button>
             <Button onClick={decode} variant="secondary" className="flex-1 sm:flex-none">
@@ -198,7 +207,7 @@ export default function Base64Page() {
           <CardTitle className="text-base">Tips</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
-          <p>• <strong>Ctrl+Enter</strong> to encode, <strong>Shift+Enter</strong> to decode</p>
+          <p>• <strong>{modKey}+Enter</strong> to encode, <strong>Shift+Enter</strong> to decode</p>
           <p>• Supports all Unicode characters including Chinese, Japanese, Korean, and emoji</p>
           <p>• Use &quot;Use as Input&quot; to chain encode/decode operations</p>
         </CardContent>
