@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Wrench } from "lucide-react"
+import { Clock, Binary } from "lucide-react"
 
 const tools = [
   {
@@ -9,7 +9,12 @@ const tools = [
     href: "/timezone",
     icon: Clock,
   },
-  // Add more tools here as you build them
+  {
+    name: "Base64 Encoder/Decoder",
+    description: "Encode and decode Base64 strings with Unicode support",
+    href: "/base64",
+    icon: Binary,
+  },
 ]
 
 export default function Page() {
