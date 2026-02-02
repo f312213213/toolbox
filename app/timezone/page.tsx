@@ -514,6 +514,7 @@ export default function TimezonePage() {
                   setSelectedDate(now)
                   setHours(String(now.getHours()).padStart(2, "0"))
                   setMinutes(String(now.getMinutes()).padStart(2, "0"))
+                  setSourceTimezone("local")
                 }}
                 className="shrink-0"
               >
