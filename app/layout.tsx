@@ -30,6 +30,13 @@ export const metadata: Metadata = {
     title: "Toolbox - Useful Utilities",
     description: "A collection of useful tools and utilities for everyday tasks.",
   },
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+    other: [
+      { rel: "icon", url: "/favicon.svg" },
+    ],
+  },
 };
 
 export default function RootLayout({
