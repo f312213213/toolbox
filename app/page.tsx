@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Binary } from "lucide-react"
+import { Clock, Binary, Link2 } from "lucide-react"
 
 const tools = [
   {
@@ -14,6 +14,12 @@ const tools = [
     description: "Encode and decode Base64 strings with Unicode support",
     href: "/base64",
     icon: Binary,
+  },
+  {
+    name: "URI Encoder/Decoder",
+    description: "Encode and decode URI strings with percent-encoding",
+    href: "/uri",
+    icon: Link2,
   },
 ]
 
