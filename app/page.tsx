@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Binary, Link2 } from "lucide-react"
+import { Clock, Binary, Link2, Search } from "lucide-react"
 
 const tools = [
   {
@@ -20,6 +20,12 @@ const tools = [
     description: "Encode and decode URI strings with percent-encoding",
     href: "/uri",
     icon: Link2,
+  },
+  {
+    name: "Query String Visualizer",
+    description: "Parse and inspect URL query parameters",
+    href: "/query",
+    icon: Search,
   },
 ]
 
