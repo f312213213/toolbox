@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { toast } from "sonner"
-import { Copy, Timer } from "lucide-react"
+import { Copy, Timer, Trash2 } from "lucide-react"
 
 export default function TimestampPage() {
   const [timestampInput, setTimestampInput] = useState<string>("")
