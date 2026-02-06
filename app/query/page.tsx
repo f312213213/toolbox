@@ -166,7 +166,9 @@ export default function QueryPage() {
           <CardTitle>Result</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="font-mono break-words">{buildFull()}</div>
+          <div className="font-mono break-words">
+            {buildFull() ? buildFull() : <span className="text-muted-foreground">Your reconstructed URL will appear here</span>}
+          </div>
         </CardContent>
       </Card>
 
