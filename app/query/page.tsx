@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { toast } from "sonner"
 import { Copy, Trash2 } from "lucide-react"
 
 function parseQuery(url: string) {
@@ -145,8 +146,14 @@ export default function QueryPage() {
                 </tbody>
               </table>
               <div className="mt-4 flex gap-2">
-                <Button onClick={() => navigator.clipboard.writeText(buildQuery())}><Copy className="size-4 mr-2"/>Copy query</Button>
-                <Button onClick={() => navigator.clipboard.writeText(buildFull())} variant="outline">Copy full URL</Button>
+                <Button onClick={() => {
+                  navigator.clipboard.writeText(buildQuery())
+                  toast.success("Query copied to clipboard!")
+                }}><Copy className="size-4 mr-2"/>Copy query</Button>
+                <Button onClick={() => {
+                  navigator.clipboard.writeText(buildFull())
+                  toast.success("Full URL copied to clipboard!")
+                }} variant="outline">Copy full URL</Button>
                 <Button onClick={addRow} variant="ghost">Add param</Button>
               </div>
             </div>
