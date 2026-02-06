@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Binary, Link2, Search } from "lucide-react"
+import { Clock, Binary, Link2, Search, Timer } from "lucide-react"
 
 const tools = [
   {
@@ -26,6 +26,12 @@ const tools = [
     description: "Parse and inspect URL query parameters",
     href: "/query",
     icon: Search,
+  },
+  {
+    name: "Timestamp Converter",
+    description: "Convert Unix timestamps to human-readable dates and times",
+    href: "/timestamp",
+    icon: Timer,
   },
 ]
 
