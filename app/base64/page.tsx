@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Binary, ArrowDown, Copy, Trash2, ArrowUpDown } from "lucide-react"
+import { Binary, Copy, Check, Trash2, ArrowUpDown } from "lucide-react"
 
 export default function Base64Page() {
   const [input, setInput] = useState<string>("")
@@ -49,7 +49,7 @@ export default function Base64Page() {
       setLastOperation("decode")
       setError(null)
     } catch (e) {
-      setError("Decoding failed: Invalid Base64 string")
+      setError("Not a valid Base64 string. Check for extra spaces or missing characters.")
     }
   }, [input])
 
@@ -107,14 +107,14 @@ export default function Base64Page() {
   const modKey = isMac ? "⌘" : "Ctrl"
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Binary className="size-6" />
+    <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
+      <div className="space-y-3 animate-fade-up">
+        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <Binary className="size-8 text-primary" />
           Base64 Encoder/Decoder
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Encode text to Base64 or decode Base64 strings. Supports Unicode (including Chinese, emoji, etc.)
+        <p className="text-muted-foreground text-lg max-w-xl">
+          Encode and decode Base64 strings with full Unicode support.
         </p>
       </div>
 
@@ -122,12 +122,12 @@ export default function Base64Page() {
         <CardHeader>
           <CardTitle>Input</CardTitle>
           <CardDescription>
-            Enter text to encode or Base64 string to decode
+            Plain text or a Base64 string
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
-            placeholder="Enter text here..."
+            placeholder="Paste text or Base64 string..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -150,10 +150,6 @@ export default function Base64Page() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-center">
-        <ArrowDown className="size-6 text-muted-foreground" />
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -164,17 +160,10 @@ export default function Base64Page() {
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>
-            {lastOperation === "encode"
-              ? "Base64 encoded result"
-              : lastOperation === "decode"
-              ? "Decoded text result"
-              : "Result will appear here"}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
-            placeholder="Output will appear here..."
+            placeholder="Result appears here after encoding or decoding"
             value={output}
             readOnly
             className="min-h-32 font-mono resize-y"
@@ -185,8 +174,8 @@ export default function Base64Page() {
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={copyOutput} variant="outline" className="flex-1 sm:flex-none">
-              <Copy className="size-4 mr-2" />
+            <Button onClick={copyOutput} variant="outline" disabled={!output} className="flex-1 sm:flex-none">
+              {copied ? <Check className="size-4 mr-2" /> : <Copy className="size-4 mr-2" />}
               {copied ? "Copied!" : "Copy"}
             </Button>
             <Button onClick={swapInputOutput} variant="outline" disabled={!output} className="flex-1 sm:flex-none">
@@ -208,16 +197,15 @@ export default function Base64Page() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
           <p>• <strong>{modKey}+Enter</strong> to encode, <strong>Shift+Enter</strong> to decode</p>
-          <p>• Supports all Unicode characters including Chinese, Japanese, Korean, and emoji</p>
+          <p>• Works with all Unicode characters (CJK, emoji, accented text)</p>
           <p>• Use &quot;Use as Input&quot; to chain encode/decode operations</p>
         </CardContent>
       </Card>
 
-      {/* Floating back to home button */}
-      <Link href="/">
+      <Link href="/" className="animate-fade-in stagger-3">
         <Button
           variant="outline"
-          className="fixed bottom-6 right-6"
+          className="fixed bottom-6 right-6 font-semibold"
         >
           Back to Home
         </Button>

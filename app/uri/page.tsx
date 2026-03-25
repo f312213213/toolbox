@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Link2, ArrowDown, Copy, Trash2, ArrowUpDown } from "lucide-react"
+import { Link2, Copy, Check, Trash2, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type EncodingMode = "uri" | "uriComponent"
@@ -55,7 +55,7 @@ export default function URIPage() {
       setLastOperation("decode")
       setError(null)
     } catch (e) {
-      setError("Decoding failed: Invalid URI string (malformed URI sequence)")
+      setError("Not a valid encoded URI. Check for incomplete percent sequences like %2 instead of %20.")
     }
   }, [input, mode])
 
@@ -113,14 +113,14 @@ export default function URIPage() {
   const modKey = isMac ? "⌘" : "Ctrl"
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Link2 className="size-6" />
+    <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
+      <div className="space-y-3 animate-fade-up">
+        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <Link2 className="size-8 text-primary" />
           URI Encoder/Decoder
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Encode and decode URI strings with percent-encoding
+        <p className="text-muted-foreground text-lg max-w-xl">
+          Percent-encode and decode URI strings.
         </p>
       </div>
 
@@ -128,7 +128,7 @@ export default function URIPage() {
         <CardHeader>
           <CardTitle>Input</CardTitle>
           <CardDescription>
-            Enter text to encode or URI string to decode
+            Plain text or a percent-encoded string
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,7 +166,7 @@ export default function URIPage() {
           </div>
 
           <Textarea
-            placeholder="Enter text here..."
+            placeholder="Paste text or encoded URI..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -189,10 +189,6 @@ export default function URIPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-center">
-        <ArrowDown className="size-6 text-muted-foreground" />
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -210,17 +206,10 @@ export default function URIPage() {
               )}
             </div>
           </CardTitle>
-          <CardDescription>
-            {lastOperation === "encode"
-              ? `URI encoded result (${mode === "uriComponent" ? "encodeURIComponent" : "encodeURI"})`
-              : lastOperation === "decode"
-              ? `Decoded text result (${mode === "uriComponent" ? "decodeURIComponent" : "decodeURI"})`
-              : "Result will appear here"}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
-            placeholder="Output will appear here..."
+            placeholder="Result appears here after encoding or decoding"
             value={output}
             readOnly
             className="min-h-32 font-mono resize-y"
@@ -231,8 +220,8 @@ export default function URIPage() {
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={copyOutput} variant="outline" className="flex-1 sm:flex-none">
-              <Copy className="size-4 mr-2" />
+            <Button onClick={copyOutput} variant="outline" disabled={!output} className="flex-1 sm:flex-none">
+              {copied ? <Check className="size-4 mr-2" /> : <Copy className="size-4 mr-2" />}
               {copied ? "Copied!" : "Copy"}
             </Button>
             <Button onClick={swapInputOutput} variant="outline" disabled={!output} className="flex-1 sm:flex-none">
@@ -266,11 +255,10 @@ export default function URIPage() {
         </CardContent>
       </Card>
 
-      {/* Floating back to home button */}
-      <Link href="/">
+      <Link href="/" className="animate-fade-in stagger-3">
         <Button
           variant="outline"
-          className="fixed bottom-6 right-6"
+          className="fixed bottom-6 right-6 font-semibold"
         >
           Back to Home
         </Button>

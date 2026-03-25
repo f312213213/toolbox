@@ -1,9 +1,14 @@
 import type { Metadata } from "next"
+import { ToolJsonLd } from "@/lib/json-ld"
 
 export const metadata: Metadata = {
   title: "URI Encoder/Decoder",
-  description: "Encode and decode URI strings easily. Supports both encodeURI/decodeURI and encodeURIComponent/decodeURIComponent.",
-  keywords: ["uri encoder", "uri decoder", "url encoder", "url decoder", "encodeURI", "decodeURI", "encodeURIComponent", "decodeURIComponent", "percent encoding"],
+  description: "Encode and decode URI strings with percent-encoding. Toggle between encodeURIComponent and encodeURI modes to see the difference.",
+  keywords: ["uri encoder", "uri decoder", "url encoder", "url decoder", "encodeURI", "encodeURIComponent", "percent encoding", "online url encoder"],
+  openGraph: {
+    title: "URI Encoder/Decoder",
+    description: "Encode and decode URI strings with percent-encoding. Compare encodeURIComponent vs encodeURI side by side.",
+  },
 }
 
 export default function URILayout({
@@ -11,5 +16,14 @@ export default function URILayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <ToolJsonLd
+        name="URI Encoder/Decoder"
+        description="Encode and decode URI strings with percent-encoding. Compare encodeURIComponent vs encodeURI."
+        path="/uri"
+      />
+      {children}
+    </>
+  )
 }

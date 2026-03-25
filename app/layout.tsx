@@ -14,28 +14,41 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://tool.chiendavid.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Toolbox - Useful Utilities",
+    default: "Toolbox - Developer Utilities",
     template: "%s | Toolbox",
   },
-  description: "A collection of useful tools and utilities for everyday tasks.",
-  keywords: ["toolbox", "utilities", "tools", "web tools", "timezone converter"],
+  description: "A collection of sharp utilities for everyday dev tasks — timezone converter, Base64, URI encoder, query string parser, and Schengen calculator.",
+  keywords: ["developer tools", "online utilities", "timezone converter", "base64 encoder", "uri encoder", "query string parser", "schengen calculator"],
   authors: [{ name: "David Chien" }],
   creator: "David Chien",
   openGraph: {
     type: "website",
     locale: "en_US",
     siteName: "Toolbox",
-    title: "Toolbox - Useful Utilities",
-    description: "A collection of useful tools and utilities for everyday tasks.",
+    title: "Toolbox - Developer Utilities",
+    description: "A collection of sharp utilities for everyday dev tasks — timezone converter, Base64, URI encoder, query string parser, and Schengen calculator.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Toolbox - Developer Utilities",
+    description: "Sharp utilities for everyday dev tasks.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
   icons: {
     icon: "/favicon.svg",
     apple: "/favicon.svg",
-    other: [
-      { rel: "icon", url: "/favicon.svg" },
-    ],
   },
 };
 

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { toast } from "sonner"
-import { Copy, Trash2 } from "lucide-react"
+import { Copy, Trash2, Search } from "lucide-react"
 
 function parseQuery(url: string) {
   try {
@@ -87,21 +87,22 @@ export default function QueryPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Query String Visualizer</h1>
-        <p className="text-muted-foreground text-sm">Paste a URL and inspect/edit query parameters</p>
+    <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
+      <div className="space-y-3 animate-fade-up">
+        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <Search className="size-8 text-primary" />
+          Query String Visualizer
+        </h1>
+        <p className="text-muted-foreground text-lg max-w-xl">Paste a URL and inspect/edit query parameters</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>URL / Query string</CardTitle>
-          <CardDescription>Paste a full URL or just the query string</CardDescription>
+          <CardTitle>URL or Query String</CardTitle>
+          <CardDescription>Paste a full URL or just the ?key=value part</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
-            <Textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="https://example.com/path?foo=1&bar=2#hash" />
-          </div>
+          <Textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="https://example.com/path?foo=1&bar=2#hash" />
           <div className="mt-3 flex gap-2">
             <Button onClick={handleParse}>Parse</Button>
             <Button variant="ghost" onClick={() => { setInput(""); setRows([]); setBaseUrl("") }}><Trash2 className="size-4 mr-2"/>Clear</Button>
@@ -112,31 +113,31 @@ export default function QueryPage() {
       <Card>
         <CardHeader>
           <CardTitle>Parameters</CardTitle>
-          <CardDescription>Parsed key-value pairs (editable)</CardDescription>
+          <CardDescription>Edit keys and values directly in the table</CardDescription>
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
-            <div className="text-muted-foreground">No parameters found — click Parse or add one</div>
+            <div className="text-muted-foreground py-6 text-center border border-dashed border-muted-foreground/20">No parameters yet. Click Parse to extract from a URL, or Add param to start fresh.</div>
           ) : (
             <div>
               <table className="w-full table-fixed">
                 <thead>
-                  <tr>
-                    <th className="text-left w-1/3">Key</th>
-                    <th className="text-left w-2/3">Value</th>
-                    <th className="w-24">Action</th>
+                  <tr className="border-b-2 border-primary/30">
+                    <th className="text-left w-1/3 text-xs uppercase tracking-wider text-muted-foreground pb-2 font-semibold">Key</th>
+                    <th className="text-left w-2/3 text-xs uppercase tracking-wider text-muted-foreground pb-2 font-semibold">Value</th>
+                    <th className="w-24 text-xs uppercase tracking-wider text-muted-foreground pb-2 font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r, i) => (
-                    <tr key={`${r.key}-${i}`}>
-                      <td className="align-top py-2 pr-4">
-                        <input className="w-full bg-transparent outline-none" value={r.key} onChange={(e) => updateRow(i, "key", e.target.value)} />
+                    <tr key={`${r.key}-${i}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="align-top py-3 pr-4">
+                        <input className="w-full min-w-0 bg-transparent outline-none font-mono text-sm" value={r.key} onChange={(e) => updateRow(i, "key", e.target.value)} />
                       </td>
-                      <td className="align-top py-2 pr-4">
-                        <input className="w-full bg-transparent outline-none" value={r.value} onChange={(e) => updateRow(i, "value", e.target.value)} />
+                      <td className="align-top py-3 pr-4">
+                        <input className="w-full min-w-0 bg-transparent outline-none font-mono text-sm" value={r.value} onChange={(e) => updateRow(i, "value", e.target.value)} />
                       </td>
-                      <td className="align-top py-2 pr-4">
+                      <td className="align-top py-3 pr-4">
                         <div className="flex gap-2">
                           <Button variant="ghost" onClick={() => removeRow(i)}>Remove</Button>
                         </div>
@@ -161,19 +162,20 @@ export default function QueryPage() {
         </CardContent>
       </Card>
 
-      <Card size="sm">
+      <Card size="sm" className="relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1 h-full bg-primary/70" />
         <CardHeader>
           <CardTitle>Result</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="font-mono break-words">
-            {buildFull() ? buildFull() : <span className="text-muted-foreground">Your reconstructed URL will appear here</span>}
+          <div className="font-mono text-sm leading-relaxed break-all">
+            {buildFull() ? buildFull() : <span className="text-muted-foreground">The rebuilt URL will appear here once you have parameters</span>}
           </div>
         </CardContent>
       </Card>
 
-      <Link href="/">
-        <Button variant="outline" className="fixed bottom-6 right-6">Back to Home</Button>
+      <Link href="/" className="animate-fade-in stagger-3">
+        <Button variant="outline" className="fixed bottom-6 right-6 font-semibold">Back to Home</Button>
       </Link>
     </div>
   )

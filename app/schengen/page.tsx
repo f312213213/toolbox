@@ -124,13 +124,13 @@ export default function SchengenPage() {
   const pct = Math.min(100, Math.round((daysUsed / 90) * 100))
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Plane className="size-6" />
+    <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
+      <div className="space-y-3 animate-fade-up">
+        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <Plane className="size-8 text-primary" />
           Schengen Visa Calculator
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-lg max-w-xl">
           90/180 rule — you may stay up to 90 days in any 180-day rolling window
         </p>
       </div>
@@ -140,31 +140,31 @@ export default function SchengenPage() {
         "border-2",
         isOverstay ? "border-destructive" : daysRemaining <= 14 ? "border-yellow-500" : "border-green-500/50"
       )}>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 pb-6">
           {/* Big number */}
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
             {trips.length === 0 ? (
               <>
-                <p className="text-4xl font-bold">90</p>
-                <p className="text-muted-foreground">days available — add your trips below</p>
+                <p className="text-7xl font-black tracking-tight">90</p>
+                <p className="text-muted-foreground text-base">days available — add your trips below</p>
               </>
             ) : isOverstay ? (
               <>
-                <div className="flex items-center justify-center gap-2">
-                  <AlertTriangle className="size-8 text-destructive" />
-                  <p className="text-4xl font-bold text-destructive">Over by {daysUsed - 90} days</p>
+                <div className="flex items-center justify-center gap-4">
+                  <AlertTriangle className="size-10 text-destructive" />
+                  <p className="text-5xl font-black tracking-tight text-destructive">Over by {daysUsed - 90}</p>
                 </div>
-                <p className="text-muted-foreground">You exceed the 90-day limit</p>
+                <p className="text-muted-foreground text-base">You exceed the 90-day limit</p>
               </>
             ) : (
               <>
-                <div className="flex items-center justify-center gap-2">
-                  <CircleCheck className={cn("size-8", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
-                  <p className={cn("text-4xl font-bold", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
+                <div className="flex items-center justify-center gap-4">
+                  <CircleCheck className={cn("size-10", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
+                  <p className={cn("text-5xl font-black tracking-tight", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
                     {daysRemaining} days left
                   </p>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-base">
                   {daysUsed} of 90 days used
                 </p>
               </>
@@ -173,18 +173,18 @@ export default function SchengenPage() {
 
           {/* Progress bar */}
           {trips.length > 0 && (
-            <div className="mt-6 space-y-1.5">
-              <div className="h-3 rounded-full bg-muted overflow-hidden">
+            <div className="mt-8 space-y-2">
+              <div className="h-4 bg-muted overflow-hidden">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-all",
+                    "h-full transition-all duration-500 ease-out animate-fill",
                     isOverstay ? "bg-destructive" : pct > 75 ? "bg-yellow-500" : "bg-green-500"
                   )}
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                {daysUsed} / 90 days ({pct}%) — calculated at {format(peakDate, "MMM d, yyyy")}
+              <p className="text-xs text-muted-foreground text-center tracking-wide uppercase">
+                {daysUsed} / 90 days ({pct}%) — as of {format(peakDate, "MMM d, yyyy")}
               </p>
             </div>
           )}
@@ -244,8 +244,8 @@ export default function SchengenPage() {
 
       {/* Trip List */}
       {trips.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Your Trips</h2>
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Your Trips</h2>
           <div className="grid gap-2">
             {trips.map((trip) => {
               const duration = differenceInCalendarDays(trip.exit, trip.entry) + 1
@@ -257,7 +257,7 @@ export default function SchengenPage() {
                 <Card key={trip.id} size="sm">
                   <CardContent className="flex items-center justify-between gap-3 py-3">
                     <div className="flex items-center gap-3 min-w-0 flex-wrap">
-                      <div className="text-sm">
+                      <div className="text-sm whitespace-nowrap">
                         <span className="font-medium">{format(trip.entry, "MMM d, yyyy")}</span>
                         <span className="text-muted-foreground mx-1.5">→</span>
                         <span className="font-medium">{format(trip.exit, "MMM d, yyyy")}</span>
@@ -269,7 +269,7 @@ export default function SchengenPage() {
                         <Badge variant="secondary" className="shrink-0">planned</Badge>
                       )}
                       {isExpired && (
-                        <Badge variant="outline" className="shrink-0 text-muted-foreground">outside window</Badge>
+                        <Badge variant="outline" className="shrink-0 text-muted-foreground">expired</Badge>
                       )}
                     </div>
                     <Button variant="ghost" size="icon-xs" onClick={() => removeTrip(trip.id)}>
@@ -288,13 +288,13 @@ export default function SchengenPage() {
         <CardContent className="flex gap-3 py-4">
           <Info className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            The calculator finds the <strong className="text-foreground">worst-case date</strong> across all your trips (past and planned) and counts how many days fall within its 180-day lookback window. This tells you whether your travel plan stays within the 90-day limit.
+            We check the <strong className="text-foreground">worst-case date</strong> across all your trips and count how many days fall in its 180-day window. If you're over 90, you've overstayed.
           </p>
         </CardContent>
       </Card>
 
-      <Link href="/">
-        <Button variant="outline" className="fixed bottom-6 right-6">
+      <Link href="/" className="animate-fade-in stagger-3">
+        <Button variant="outline" className="fixed bottom-6 right-6 font-semibold">
           Back to Home
         </Button>
       </Link>

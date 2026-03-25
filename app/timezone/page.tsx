@@ -407,23 +407,20 @@ export default function TimezonePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Clock className="size-6" />
+    <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
+      <div className="space-y-3 animate-fade-up">
+        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <Clock className="size-8 text-primary" />
           Timezone Converter
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Convert time across different timezones easily
+        <p className="text-muted-foreground text-lg max-w-xl">
+          Pick a time in one timezone, see it in others.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Input Time</CardTitle>
-          <CardDescription>
-            Enter a time and select the source timezone
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -549,7 +546,7 @@ export default function TimezonePage() {
                 <ComboboxList>
                   {filterTimezones(sourceSearch).length === 0 ? (
                     <div className="text-muted-foreground py-6 text-center text-xs">
-                      No timezone found
+                      No matches found
                     </div>
                   ) : (
                     filterTimezones(sourceSearch).map((group, groupIndex) => (
@@ -579,7 +576,6 @@ export default function TimezonePage() {
       <Card>
         <CardHeader>
           <CardTitle>Target Timezones</CardTitle>
-          <CardDescription>Add timezones to convert to</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -618,7 +614,7 @@ export default function TimezonePage() {
                     if (filteredGroups.length === 0) {
                       return (
                         <div className="text-muted-foreground py-6 text-center text-xs">
-                          No timezone found
+                          No matches found
                         </div>
                       )
                     }
@@ -651,21 +647,22 @@ export default function TimezonePage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Converted Times</h2>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold">Converted Times</h2>
         <div className="grid gap-3 md:grid-cols-2">
-          {targetTimezones.map((tzId) => {
+          {targetTimezones.map((tzId, i) => {
             const timezoneData = getTimezoneById(tzId)
             const offset = timezoneData ? getTimezoneOffset(timezoneData.value) : ""
             return (
-              <Card key={tzId} size="sm">
+              <Card key={tzId} size="sm" className={`relative overflow-hidden animate-scale-in stagger-${Math.min(i + 1, 6)}`}>
+                <div className="absolute top-0 left-0 w-1 h-full bg-primary/70" />
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between gap-2">
-                    <span className="text-lg flex-1">
+                    <span className="text-lg font-bold flex-1">
                       {timezoneData?.label || tzId}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className="shrink-0">
+                      <Badge variant="secondary" className="shrink-0 font-mono">
                         {offset}
                       </Badge>
                       <Button
@@ -680,7 +677,7 @@ export default function TimezonePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-base">{convertTime(tzId)}</div>
+                  <div className="text-xl font-semibold tracking-tight">{convertTime(tzId)}</div>
                 </CardContent>
               </Card>
             )
@@ -689,18 +686,17 @@ export default function TimezonePage() {
 
         {targetTimezones.length === 0 && (
           <Card size="sm">
-            <CardContent className="text-center text-muted-foreground py-8">
-              No target timezones selected. Add some above to see conversions.
+            <CardContent className="text-center text-muted-foreground py-12 border border-dashed border-muted-foreground/20">
+              Add a timezone above to start converting.
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Floating back to home button */}
-      <Link href="/">
+      <Link href="/" className="animate-fade-in stagger-3">
         <Button
           variant="outline"
-          className="fixed bottom-6 right-6"
+          className="fixed bottom-6 right-6 font-semibold"
         >
           Back to Home
         </Button>

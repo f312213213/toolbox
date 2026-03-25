@@ -2,73 +2,52 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-This is a Next.js 16.1 application using React 19.2, TypeScript, and Tailwind CSS 4. The project uses pnpm as the package manager and follows the Next.js App Router architecture. It integrates shadcn/ui components with the "radix-mira" style variant for the UI component library.
-
 ## Development Commands
 
 ```bash
-# Start development server (http://localhost:3000)
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
-
-# Run linter
-pnpm lint
+pnpm dev          # Start dev server at http://localhost:3000
+pnpm build        # Production build
+pnpm start        # Start production server
+pnpm lint         # Run ESLint
 ```
 
 ## Architecture
 
-### Project Structure
+Next.js 16.1 app (App Router) with React 19, TypeScript, Tailwind CSS 4, and shadcn/ui (radix-mira style). Uses pnpm.
 
-- `app/` - Next.js App Router pages and layouts
-  - `layout.tsx` - Root layout with font configuration (Geist, Outfit)
-  - `page.tsx` - Homepage that renders ComponentExample
-  - `globals.css` - Global styles and Tailwind configuration
-  - Route-specific directories (e.g., `timezone/`) contain their own `page.tsx`
+### Tools
 
-- `components/` - Reusable React components
-  - `ui/` - shadcn/ui component library (13 components including alert-dialog, button, card, combobox, dropdown-menu, field, input, select, etc.)
-  - `example.tsx` - Layout wrapper components (ExampleWrapper, Example) for demo pages
-  - `component-example.tsx` - Demo showcasing UI components
+Each tool lives in `app/<tool>/page.tsx` as a self-contained client component:
+- `/timezone` — timezone converter with localStorage-persisted target zones
+- `/base64` — Base64 encode/decode with Unicode support
+- `/uri` — URI encode/decode with encodeURI vs encodeURIComponent toggle
+- `/query` — query string parser/editor with editable key-value table
+- `/schengen` — Schengen 90/180 visa calculator with localStorage-persisted trips
 
-- `lib/` - Utility functions
-  - `utils.ts` - Contains the `cn()` utility for merging Tailwind classes with clsx and tailwind-merge
+The homepage (`app/page.tsx`) is a server component that renders the tool grid.
+
+### Styling
+
+- **Dark mode only** — hardcoded via `className="dark"` on `<body>` in `app/layout.tsx`
+- **Zero border-radius** — `--radius: 0` in globals.css. The design is intentionally sharp-cornered.
+- **Color theme** — warm orange/red primary (oklch hue ~25), defined as CSS variables in `globals.css` under `:root` and `.dark`
+- **All styling is Tailwind inline** — no custom CSS utility classes. Only keyframes, animation classes (`.animate-fade-up`, `.animate-scale-in`, `.stagger-*`, `.animate-fill`), and the `[data-stagger]` nth-child selector remain in globals.css because they can't be expressed as inline Tailwind.
+- **Tool page layout** — each tool page uses `container mx-auto max-w-4xl px-6 py-14 space-y-8` with `data-stagger` attribute for entrance animations
+- **`cn()` utility** — from `@/lib/utils`, merges Tailwind classes via clsx + tailwind-merge
+
+### Fonts
+
+Three Google Fonts loaded in `app/layout.tsx`: Outfit (`--font-sans`, primary), Geist Sans (`--font-geist-sans`), Geist Mono (`--font-geist-mono`).
+
+### UI Components
+
+shadcn/ui components live in `components/ui/`. All are client-side (`"use client"`). Icons from lucide-react.
+
+Config in `components.json`: style `radix-mira`, base color `zinc`, menu color `inverted`, menu accent `bold`. Install new components with `pnpm dlx shadcn@latest add <component>`.
 
 ### Key Patterns
 
-**Import Aliases**: Use `@/` prefix for absolute imports (defined in tsconfig.json):
-- `@/components` → `./components`
-- `@/lib` → `./lib`
-- `@/hooks` → `./hooks`
-
-**Component Composition**: shadcn/ui components follow a compound component pattern with explicit sub-components (e.g., Card exports CardHeader, CardTitle, CardContent, CardFooter, CardAction).
-
-**Styling**: Uses Tailwind CSS with the `cn()` utility from `@/lib/utils` to merge conditional classes. The design system uses CSS variables defined in `globals.css`.
-
-**Fonts**: The app uses three Google Fonts (Geist Sans, Geist Mono, Outfit) loaded via next/font/google. Outfit is set as the primary sans font via CSS variable `--font-sans`.
-
-**UI Components**: All UI components are client-side ("use client" directive) and use lucide-react for icons.
-
-## shadcn/ui Configuration
-
-The project uses shadcn/ui with the following settings (components.json):
-- Style: radix-mira
-- Base color: zinc
-- Icon library: lucide-react
-- CSS variables enabled
-- Menu color: inverted
-- Menu accent: bold
-
-When adding new shadcn components, they should be installed to `components/ui/`.
-
-## Styling Notes
-
-- Dark mode is enabled by default (see `app/layout.tsx` with `className="dark"` on body)
-- Tailwind CSS 4 is configured via PostCSS
-- Global styles use CSS custom properties for theming
+- **Import aliases**: `@/` maps to project root (e.g., `@/components/ui/button`)
+- **Compound components**: shadcn/ui uses sub-component pattern (e.g., `Card`, `CardHeader`, `CardTitle`, `CardContent`)
+- **Client state persistence**: Timezone targets and Schengen trips persist via localStorage
+- **Accessibility**: `prefers-reduced-motion` is respected via media query in globals.css
