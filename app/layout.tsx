@@ -63,6 +63,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "@/components/ui/sonner"
+import { Analytics } from "@vercel/analytics/next"
 
 export default function RootLayout({
   children,
@@ -76,6 +77,7 @@ export default function RootLayout({
       >
         {children}
         <Toaster />
+        <Analytics />
         <script
           defer
           src="https://static.cloudflareinsights.com/beacon.min.js"
