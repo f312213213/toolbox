@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Plane, Plus, Trash2, Calendar as CalendarIcon, AlertTriangle, CheckCircle } from "lucide-react"
+import { Plane, Plus, Trash2, Calendar as CalendarIcon, AlertTriangle, CircleCheck, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   differenceInCalendarDays,
   format,
   subDays,
-  isWithinInterval,
   max as dateMax,
   min as dateMin,
   addDays,
@@ -34,20 +33,14 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9)
 }
 
-/** Count how many days from the given trips fall within the 180-day window ending on `refDate` (inclusive). */
+/** Count days from trips within the 180-day window ending on refDate. */
 function countDaysUsed(trips: Trip[], refDate: Date): number {
-  const windowStart = startOfDay(subDays(refDate, 179)) // 180-day window: windowStart .. refDate
+  const windowStart = startOfDay(subDays(refDate, 179))
   const windowEnd = startOfDay(refDate)
-
   let total = 0
   for (const trip of trips) {
-    const tripStart = startOfDay(trip.entry)
-    const tripEnd = startOfDay(trip.exit)
-
-    // Overlap between [tripStart, tripEnd] and [windowStart, windowEnd]
-    const overlapStart = dateMax([tripStart, windowStart])
-    const overlapEnd = dateMin([tripEnd, windowEnd])
-
+    const overlapStart = dateMax([startOfDay(trip.entry), windowStart])
+    const overlapEnd = dateMin([startOfDay(trip.exit), windowEnd])
     if (!isAfter(overlapStart, overlapEnd)) {
       total += differenceInCalendarDays(overlapEnd, overlapStart) + 1
     }
@@ -55,33 +48,29 @@ function countDaysUsed(trips: Trip[], refDate: Date): number {
   return total
 }
 
-/** Find the earliest future date when the user can re-enter and have `wantDays` available. */
-function findNextEntryDate(trips: Trip[], today: Date, wantDays: number): Date | null {
-  // Scan forward up to 180 days
-  for (let offset = 0; offset <= 180; offset++) {
-    const candidate = addDays(today, offset)
-    const used = countDaysUsed(trips, candidate)
-    if (90 - used >= wantDays) return candidate
-  }
-  return null
-}
-
-/** Find the peak (worst-case) usage across all trip exit dates including future trips. */
-function findPeakUsage(trips: Trip[], today: Date): { date: Date; used: number } {
+/** Find the date with the highest usage across all trip exit dates. */
+function findPeakDate(trips: Trip[], today: Date): Date {
   let peakDate = today
   let peakUsed = countDaysUsed(trips, today)
-
   for (const trip of trips) {
-    const exitDate = startOfDay(trip.exit)
-    // Check at each trip's exit date
-    const used = countDaysUsed(trips, exitDate)
+    const d = startOfDay(trip.exit)
+    const used = countDaysUsed(trips, d)
     if (used > peakUsed) {
       peakUsed = used
-      peakDate = exitDate
+      peakDate = d
     }
   }
+  return peakDate
+}
 
-  return { date: peakDate, used: peakUsed }
+/** How many days of this trip overlap with the 180-day window ending on refDate. */
+function tripDaysInWindow(trip: Trip, refDate: Date): number {
+  const windowStart = startOfDay(subDays(refDate, 179))
+  const windowEnd = startOfDay(refDate)
+  const overlapStart = dateMax([startOfDay(trip.entry), windowStart])
+  const overlapEnd = dateMin([startOfDay(trip.exit), windowEnd])
+  if (isAfter(overlapStart, overlapEnd)) return 0
+  return differenceInCalendarDays(overlapEnd, overlapStart) + 1
 }
 
 export default function SchengenPage() {
@@ -92,43 +81,30 @@ export default function SchengenPage() {
   const [exitOpen, setExitOpen] = useState(false)
   const [today, setToday] = useState<Date>(new Date("2024-01-01"))
 
-  // Hydration-safe init
   useEffect(() => {
     setToday(startOfDay(new Date()))
-
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
         const parsed: { id: string; entry: string; exit: string }[] = JSON.parse(saved)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTrips(
-          parsed.map((t) => ({
-            id: t.id,
-            entry: new Date(t.entry),
-            exit: new Date(t.exit),
-          }))
+          parsed.map((t) => ({ id: t.id, entry: new Date(t.entry), exit: new Date(t.exit) }))
         )
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
   }, [])
 
-  // Persist
   useEffect(() => {
     if (trips.length > 0) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(trips.map((t) => ({ id: t.id, entry: t.entry.toISOString(), exit: t.exit.toISOString() })))
-      )
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trips.map((t) => ({ id: t.id, entry: t.entry.toISOString(), exit: t.exit.toISOString() }))))
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
   }, [trips])
 
   const addTrip = () => {
-    if (!newEntry || !newExit) return
-    if (isAfter(newEntry, newExit)) return
-
+    if (!newEntry || !newExit || isAfter(newEntry, newExit)) return
     setTrips((prev) =>
       [...prev, { id: generateId(), entry: startOfDay(newEntry), exit: startOfDay(newExit) }].sort(
         (a, b) => a.entry.getTime() - b.entry.getTime()
@@ -138,21 +114,14 @@ export default function SchengenPage() {
     setNewExit(undefined)
   }
 
-  const removeTrip = (id: string) => {
-    setTrips((prev) => prev.filter((t) => t.id !== id))
-  }
+  const removeTrip = (id: string) => setTrips((prev) => prev.filter((t) => t.id !== id))
 
-  const daysUsed = countDaysUsed(trips, today)
+  // Use the peak date (worst-case across all trips including future) for the main calculation
+  const peakDate = trips.length > 0 ? findPeakDate(trips, today) : today
+  const daysUsed = countDaysUsed(trips, peakDate)
   const daysRemaining = Math.max(0, 90 - daysUsed)
   const isOverstay = daysUsed > 90
-  const nextFullEntry = daysRemaining === 0 ? findNextEntryDate(trips, addDays(today, 1), 1) : null
-
-  // Peak usage across all trips (including future planned ones)
-  const peak = findPeakUsage(trips, today)
-  const hasFutureTrips = trips.some((t) => isAfter(startOfDay(t.exit), today))
-  const showProjected = hasFutureTrips && peak.used > daysUsed
-  const projectedRemaining = Math.max(0, 90 - peak.used)
-  const isProjectedOverstay = peak.used > 90
+  const pct = Math.min(100, Math.round((daysUsed / 90) * 100))
 
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6">
@@ -162,136 +131,72 @@ export default function SchengenPage() {
           Schengen Visa Calculator
         </h1>
         <p className="text-muted-foreground text-sm">
-          Track your stays under the Schengen 90/180 visa-free rule
+          90/180 rule — you may stay up to 90 days in any 180-day rolling window
         </p>
       </div>
 
-      {/* Status Card */}
-      <Card className={cn(isOverstay ? "border-destructive" : daysRemaining <= 14 ? "border-yellow-500" : "")}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isOverstay ? (
-              <AlertTriangle className="size-5 text-destructive" />
+      {/* Main Result */}
+      <Card className={cn(
+        "border-2",
+        isOverstay ? "border-destructive" : daysRemaining <= 14 ? "border-yellow-500" : "border-green-500/50"
+      )}>
+        <CardContent className="pt-6">
+          {/* Big number */}
+          <div className="text-center space-y-2">
+            {trips.length === 0 ? (
+              <>
+                <p className="text-4xl font-bold">90</p>
+                <p className="text-muted-foreground">days available — add your trips below</p>
+              </>
+            ) : isOverstay ? (
+              <>
+                <div className="flex items-center justify-center gap-2">
+                  <AlertTriangle className="size-8 text-destructive" />
+                  <p className="text-4xl font-bold text-destructive">Over by {daysUsed - 90} days</p>
+                </div>
+                <p className="text-muted-foreground">You exceed the 90-day limit</p>
+              </>
             ) : (
-              <CheckCircle className={cn("size-5", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
+              <>
+                <div className="flex items-center justify-center gap-2">
+                  <CircleCheck className={cn("size-8", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
+                  <p className={cn("text-4xl font-bold", daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
+                    {daysRemaining} days left
+                  </p>
+                </div>
+                <p className="text-muted-foreground">
+                  {daysUsed} of 90 days used
+                </p>
+              </>
             )}
-            Status as of {format(today, "MMM d, yyyy")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Days Used (180-day window)</p>
-              <p className="text-2xl font-bold">{daysUsed}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Days Remaining</p>
-              <p className={cn("text-2xl font-bold", isOverstay ? "text-destructive" : daysRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
-                {isOverstay ? `−${daysUsed - 90}` : daysRemaining}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">180-day Window</p>
-              <p className="text-sm">
-                {format(subDays(today, 179), "MMM d, yyyy")} — {format(today, "MMM d, yyyy")}
-              </p>
-            </div>
           </div>
-          {isOverstay && (
-            <div className="mt-4 text-sm text-destructive">
-              You have exceeded the 90-day limit.
-            </div>
-          )}
-          {!isOverstay && daysRemaining === 0 && nextFullEntry && (
-            <div className="mt-4 text-sm text-muted-foreground">
-              Next available entry date: <span className="font-medium text-foreground">{format(nextFullEntry, "MMM d, yyyy")}</span>
-            </div>
-          )}
 
           {/* Progress bar */}
-          <div className="mt-4 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{daysUsed} / 90 days</span>
-              <span>{Math.min(100, Math.round((daysUsed / 90) * 100))}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  isOverstay ? "bg-destructive" : daysUsed / 90 > 0.75 ? "bg-yellow-500" : "bg-green-500"
-                )}
-                style={{ width: `${Math.min(100, (daysUsed / 90) * 100)}%` }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Projected Status (if future trips exist) */}
-      {showProjected && (
-        <Card className={cn(isProjectedOverstay ? "border-destructive" : projectedRemaining <= 14 ? "border-yellow-500" : "")}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {isProjectedOverstay ? (
-                <AlertTriangle className="size-5 text-destructive" />
-              ) : (
-                <CheckCircle className={cn("size-5", projectedRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
-              )}
-              Projected Peak — {format(peak.date, "MMM d, yyyy")}
-            </CardTitle>
-            <CardDescription>
-              Worst-case usage including planned future trips
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Days Used (180-day window)</p>
-                <p className="text-2xl font-bold">{peak.used}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Days Remaining</p>
-                <p className={cn("text-2xl font-bold", isProjectedOverstay ? "text-destructive" : projectedRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
-                  {isProjectedOverstay ? `−${peak.used - 90}` : projectedRemaining}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">180-day Window</p>
-                <p className="text-sm">
-                  {format(subDays(peak.date, 179), "MMM d, yyyy")} — {format(peak.date, "MMM d, yyyy")}
-                </p>
-              </div>
-            </div>
-            {isProjectedOverstay && (
-              <div className="mt-4 text-sm text-destructive">
-                Your planned trips will exceed the 90-day limit!
-              </div>
-            )}
-            <div className="mt-4 space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{peak.used} / 90 days</span>
-                <span>{Math.min(100, Math.round((peak.used / 90) * 100))}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
+          {trips.length > 0 && (
+            <div className="mt-6 space-y-1.5">
+              <div className="h-3 rounded-full bg-muted overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
-                    isProjectedOverstay ? "bg-destructive" : peak.used / 90 > 0.75 ? "bg-yellow-500" : "bg-green-500"
+                    isOverstay ? "bg-destructive" : pct > 75 ? "bg-yellow-500" : "bg-green-500"
                   )}
-                  style={{ width: `${Math.min(100, (peak.used / 90) * 100)}%` }}
+                  style={{ width: `${pct}%` }}
                 />
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                {daysUsed} / 90 days ({pct}%) — calculated at {format(peakDate, "MMM d, yyyy")}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Trip */}
       <Card>
         <CardHeader>
           <CardTitle>Add Trip</CardTitle>
           <CardDescription>
-            Enter entry and exit dates (both dates count as days in the Schengen Area)
+            Both entry and exit days count as days spent in the Schengen Area
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -300,24 +205,13 @@ export default function SchengenPage() {
               <label className="text-xs font-medium">Entry Date</label>
               <Popover open={entryOpen} onOpenChange={setEntryOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("justify-start text-left font-normal w-full", !newEntry && "text-muted-foreground")}
-                  >
+                  <Button variant="outline" className={cn("justify-start text-left font-normal w-full", !newEntry && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1.5 size-4 shrink-0" />
                     {newEntry ? format(newEntry, "MMM d, yyyy") : "Pick entry date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newEntry}
-                    onSelect={(date) => {
-                      if (date) setNewEntry(date)
-                      setEntryOpen(false)
-                    }}
-                    initialFocus
-                  />
+                  <Calendar mode="single" selected={newEntry} onSelect={(date) => { if (date) setNewEntry(date); setEntryOpen(false) }} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
@@ -325,33 +219,17 @@ export default function SchengenPage() {
               <label className="text-xs font-medium">Exit Date</label>
               <Popover open={exitOpen} onOpenChange={setExitOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("justify-start text-left font-normal w-full", !newExit && "text-muted-foreground")}
-                  >
+                  <Button variant="outline" className={cn("justify-start text-left font-normal w-full", !newExit && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1.5 size-4 shrink-0" />
                     {newExit ? format(newExit, "MMM d, yyyy") : "Pick exit date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newExit}
-                    onSelect={(date) => {
-                      if (date) setNewExit(date)
-                      setExitOpen(false)
-                    }}
-                    disabled={newEntry ? (d) => isBefore(d, newEntry) : undefined}
-                    initialFocus
-                  />
+                  <Calendar mode="single" selected={newExit} onSelect={(date) => { if (date) setNewExit(date); setExitOpen(false) }} disabled={newEntry ? (d) => isBefore(d, newEntry) : undefined} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
-            <Button
-              onClick={addTrip}
-              disabled={!newEntry || !newExit || isAfter(newEntry, newExit)}
-              className="shrink-0"
-            >
+            <Button onClick={addTrip} disabled={!newEntry || !newExit || isAfter(newEntry, newExit)} className="shrink-0">
               <Plus className="size-4 mr-1" />
               Add
             </Button>
@@ -365,42 +243,33 @@ export default function SchengenPage() {
       </Card>
 
       {/* Trip List */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Travel History</h2>
-        {trips.length === 0 ? (
-          <Card size="sm">
-            <CardContent className="text-center text-muted-foreground py-8">
-              No trips added yet. Add your Schengen area travel dates above.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-3">
+      {trips.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Your Trips</h2>
+          <div className="grid gap-2">
             {trips.map((trip) => {
               const duration = differenceInCalendarDays(trip.exit, trip.entry) + 1
-              const inWindow = isWithinInterval(trip.exit, {
-                start: subDays(today, 179),
-                end: today,
-              }) || isWithinInterval(trip.entry, {
-                start: subDays(today, 179),
-                end: today,
-              })
+              const counted = tripDaysInWindow(trip, peakDate)
+              const isFuture = isAfter(startOfDay(trip.entry), today)
+              const isExpired = counted === 0
 
               return (
                 <Card key={trip.id} size="sm">
                   <CardContent className="flex items-center justify-between gap-3 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-wrap">
                       <div className="text-sm">
                         <span className="font-medium">{format(trip.entry, "MMM d, yyyy")}</span>
                         <span className="text-muted-foreground mx-1.5">→</span>
                         <span className="font-medium">{format(trip.exit, "MMM d, yyyy")}</span>
                       </div>
-                      <Badge variant={inWindow ? "default" : "outline"} className="shrink-0">
-                        {duration}d
+                      <Badge variant={isExpired ? "outline" : "default"} className="shrink-0">
+                        {counted > 0 ? `${counted}d counted` : `${duration}d`}
                       </Badge>
-                      {inWindow && (
-                        <Badge variant="secondary" className="shrink-0">
-                          in window
-                        </Badge>
+                      {isFuture && (
+                        <Badge variant="secondary" className="shrink-0">planned</Badge>
+                      )}
+                      {isExpired && (
+                        <Badge variant="outline" className="shrink-0 text-muted-foreground">outside window</Badge>
                       )}
                     </div>
                     <Button variant="ghost" size="icon-xs" onClick={() => removeTrip(trip.id)}>
@@ -411,20 +280,15 @@ export default function SchengenPage() {
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Info */}
+      {/* How it works */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">About the 90/180 Rule</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>
-            Visa-free travellers to the Schengen Area may stay for a maximum of <strong className="text-foreground">90 days within any 180-day period</strong>.
-          </p>
-          <p>
-            The 180-day window is a rolling window — for any given day, it looks back 180 days and counts how many of those days you were present in the Schengen Area. Both the entry and exit days are counted as full days.
+        <CardContent className="flex gap-3 py-4">
+          <Info className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            The calculator finds the <strong className="text-foreground">worst-case date</strong> across all your trips (past and planned) and counts how many days fall within its 180-day lookback window. This tells you whether your travel plan stays within the 90-day limit.
           </p>
         </CardContent>
       </Card>
