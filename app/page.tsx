@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, Binary, Link2, Search, Plane, ArrowRight } from "lucide-react"
 
-const SITE_URL = "https://tool.chiendavid.com"
+const SITE_URL = "https://toolbox.chiendavid.com"
 
 const jsonLd = {
   "@context": "https://schema.org",

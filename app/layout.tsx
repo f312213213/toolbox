@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://tool.chiendavid.com";
+const SITE_URL = "https://toolbox.chiendavid.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

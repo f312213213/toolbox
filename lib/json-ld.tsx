@@ -1,4 +1,4 @@
-const SITE_URL = "https://tool.chiendavid.com"
+const SITE_URL = "https://toolbox.chiendavid.com"
 
 interface ToolJsonLdProps {
   name: string
