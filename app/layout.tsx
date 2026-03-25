@@ -19,10 +19,10 @@ const SITE_URL = "https://toolbox.chiendavid.com";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Toolbox - Developer Utilities",
+    default: "Toolbox — Free Online Developer Utilities & Converters",
     template: "%s | Toolbox",
   },
-  description: "A collection of sharp utilities for everyday dev tasks — timezone converter, Base64, URI encoder, query string parser, and Schengen calculator.",
+  description: "Free online developer tools — timezone converter, Base64 encoder/decoder, URI encoder, query string parser, and Schengen visa calculator.",
   keywords: ["developer tools", "online utilities", "timezone converter", "base64 encoder", "uri encoder", "query string parser", "schengen calculator"],
   authors: [{ name: "David Chien" }],
   creator: "David Chien",
@@ -30,13 +30,23 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "Toolbox",
-    title: "Toolbox - Developer Utilities",
-    description: "A collection of sharp utilities for everyday dev tasks — timezone converter, Base64, URI encoder, query string parser, and Schengen calculator.",
+    title: "Toolbox — Free Online Developer Utilities & Converters",
+    description: "Free online developer tools — timezone converter, Base64 encoder/decoder, URI encoder, query string parser, and Schengen visa calculator.",
+    url: SITE_URL,
+    images: [
+      {
+        url: `${SITE_URL}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: "Toolbox — Free Online Developer Utilities",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Toolbox - Developer Utilities",
-    description: "Sharp utilities for everyday dev tasks.",
+    title: "Toolbox — Free Online Developer Utilities & Converters",
+    description: "Free online developer tools — timezone, Base64, URI, query string, and Schengen calculator.",
+    images: [`${SITE_URL}/opengraph-image`],
   },
   robots: {
     index: true,
