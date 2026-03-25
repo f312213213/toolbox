@@ -66,6 +66,24 @@ function findNextEntryDate(trips: Trip[], today: Date, wantDays: number): Date |
   return null
 }
 
+/** Find the peak (worst-case) usage across all trip exit dates including future trips. */
+function findPeakUsage(trips: Trip[], today: Date): { date: Date; used: number } {
+  let peakDate = today
+  let peakUsed = countDaysUsed(trips, today)
+
+  for (const trip of trips) {
+    const exitDate = startOfDay(trip.exit)
+    // Check at each trip's exit date
+    const used = countDaysUsed(trips, exitDate)
+    if (used > peakUsed) {
+      peakUsed = used
+      peakDate = exitDate
+    }
+  }
+
+  return { date: peakDate, used: peakUsed }
+}
+
 export default function SchengenPage() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [newEntry, setNewEntry] = useState<Date | undefined>(undefined)
@@ -128,6 +146,13 @@ export default function SchengenPage() {
   const daysRemaining = Math.max(0, 90 - daysUsed)
   const isOverstay = daysUsed > 90
   const nextFullEntry = daysRemaining === 0 ? findNextEntryDate(trips, addDays(today, 1), 1) : null
+
+  // Peak usage across all trips (including future planned ones)
+  const peak = findPeakUsage(trips, today)
+  const hasFutureTrips = trips.some((t) => isAfter(startOfDay(t.exit), today))
+  const showProjected = hasFutureTrips && peak.used > daysUsed
+  const projectedRemaining = Math.max(0, 90 - peak.used)
+  const isProjectedOverstay = peak.used > 90
 
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6">
@@ -201,6 +226,65 @@ export default function SchengenPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Projected Status (if future trips exist) */}
+      {showProjected && (
+        <Card className={cn(isProjectedOverstay ? "border-destructive" : projectedRemaining <= 14 ? "border-yellow-500" : "")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {isProjectedOverstay ? (
+                <AlertTriangle className="size-5 text-destructive" />
+              ) : (
+                <CheckCircle className={cn("size-5", projectedRemaining <= 14 ? "text-yellow-500" : "text-green-500")} />
+              )}
+              Projected Peak — {format(peak.date, "MMM d, yyyy")}
+            </CardTitle>
+            <CardDescription>
+              Worst-case usage including planned future trips
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Days Used (180-day window)</p>
+                <p className="text-2xl font-bold">{peak.used}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Days Remaining</p>
+                <p className={cn("text-2xl font-bold", isProjectedOverstay ? "text-destructive" : projectedRemaining <= 14 ? "text-yellow-500" : "text-green-500")}>
+                  {isProjectedOverstay ? `−${peak.used - 90}` : projectedRemaining}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">180-day Window</p>
+                <p className="text-sm">
+                  {format(subDays(peak.date, 179), "MMM d, yyyy")} — {format(peak.date, "MMM d, yyyy")}
+                </p>
+              </div>
+            </div>
+            {isProjectedOverstay && (
+              <div className="mt-4 text-sm text-destructive">
+                Your planned trips will exceed the 90-day limit!
+              </div>
+            )}
+            <div className="mt-4 space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{peak.used} / 90 days</span>
+                <span>{Math.min(100, Math.round((peak.used / 90) * 100))}%</span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    isProjectedOverstay ? "bg-destructive" : peak.used / 90 > 0.75 ? "bg-yellow-500" : "bg-green-500"
+                  )}
+                  style={{ width: `${Math.min(100, (peak.used / 90) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Trip */}
       <Card>
