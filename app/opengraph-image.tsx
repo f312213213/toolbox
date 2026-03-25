@@ -31,6 +31,7 @@ export default async function Image() {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
+              display: "flex",
               fontSize: 88,
               fontWeight: 900,
               color: "#f5f5f5",
@@ -38,7 +39,7 @@ export default async function Image() {
               lineHeight: 1,
             }}
           >
-            Tool
+            <span>Tool</span>
             <span style={{ color: "#e8603c" }}>box</span>
           </div>
           <div

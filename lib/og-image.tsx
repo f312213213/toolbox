@@ -67,13 +67,15 @@ export function generateOgImage({ title, description }: OgImageProps) {
         >
           <div
             style={{
+              display: "flex",
               fontSize: 24,
               fontWeight: 900,
               color: "#f5f5f5",
               letterSpacing: "-0.04em",
             }}
           >
-            Tool<span style={{ color: "#e8603c" }}>box</span>
+            <span>Tool</span>
+            <span style={{ color: "#e8603c" }}>box</span>
           </div>
           <div
             style={{
