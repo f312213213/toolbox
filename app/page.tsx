@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Binary, Link2, Search, Plane, Braces, ArrowRight } from "lucide-react"
+import { Clock, Binary, Link2, Search, Plane, Braces, Quote, ArrowRight } from "lucide-react"
 
 const SITE_URL = "https://toolbox.chiendavid.com"
 
@@ -46,6 +46,12 @@ const tools = [
     description: "Beautify, validate, and minify JSON instantly",
     href: "/json",
     icon: Braces,
+  },
+  {
+    name: "JSON Stringify / Parse",
+    description: "Escape JSON into a string or unwrap it back out",
+    href: "/json-stringify",
+    icon: Quote,
   },
   {
     name: "Schengen Visa Calculator",
