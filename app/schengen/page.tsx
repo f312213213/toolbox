@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Plane, Plus, Trash2, Calendar as CalendarIcon, AlertTriangle, CircleCheck, Info } from "lucide-react"
+import { Plane, Plus, Trash2, Calendar as CalendarIcon, AlertTriangle, CircleCheck, Info, Share2, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   differenceInCalendarDays,
@@ -241,6 +241,7 @@ function SchengenCalculator() {
   const [exitOpen, setExitOpen] = useState(false)
   const [today, setToday] = useState<Date>(new Date("2024-01-01"))
   const [isTripsHydrated, setIsTripsHydrated] = useState(false)
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "shared" | "error">("idle")
 
   useEffect(() => {
     if (isTripsHydrated) return
@@ -320,6 +321,58 @@ function SchengenCalculator() {
 
   const removeTrip = (id: string) => setTrips((prev) => prev.filter((t) => t.id !== id))
 
+  const buildShareUrl = () => {
+    const shareUrl = new URL(window.location.href)
+    const tripsParam = serializeTripsParam(trips)
+
+    if (tripsParam) {
+      shareUrl.searchParams.set(TRIPS_QUERY_KEY, tripsParam)
+    } else {
+      shareUrl.searchParams.delete(TRIPS_QUERY_KEY)
+    }
+
+    return shareUrl.toString()
+  }
+
+  const shareCalculator = async () => {
+    const shareUrl = buildShareUrl()
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Schengen Visa Calculator",
+          url: shareUrl,
+        })
+        setShareStatus("shared")
+      } else {
+        await navigator.clipboard.writeText(shareUrl)
+        setShareStatus("copied")
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setShareStatus("idle")
+        return
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        setShareStatus("copied")
+      } catch {
+        setShareStatus("error")
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (shareStatus === "idle") return
+
+    const timeout = window.setTimeout(() => {
+      setShareStatus("idle")
+    }, 2400)
+
+    return () => window.clearTimeout(timeout)
+  }, [shareStatus])
+
   // Use the peak date (worst-case across all trips including future) for the main calculation
   const peakDate = trips.length > 0 ? findPeakDate(trips, today) : today
   const daysUsed = countDaysUsed(trips, peakDate)
@@ -329,14 +382,41 @@ function SchengenCalculator() {
 
   return (
     <div className="container mx-auto max-w-4xl px-6 py-14 space-y-8" data-stagger>
-      <div className="space-y-3 animate-fade-up">
-        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-          <Plane className="size-8 text-primary" />
-          Schengen Visa Calculator
-        </h1>
-        <p className="text-muted-foreground text-lg max-w-xl">
-          90/180 rule — you may stay up to 90 days in any 180-day rolling window
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between animate-fade-up">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+            <Plane className="size-8 text-primary" />
+            Schengen Visa Calculator
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-xl">
+            90/180 rule — you may stay up to 90 days in any 180-day rolling window
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={shareCalculator}
+            className="shrink-0"
+            aria-label="Share calculator link"
+          >
+            {shareStatus === "copied" || shareStatus === "shared" ? (
+              <Check className="size-4" aria-hidden="true" />
+            ) : (
+              <Share2 className="size-4" aria-hidden="true" />
+            )}
+            {shareStatus === "copied" ? "Copied" : shareStatus === "shared" ? "Shared" : "Share"}
+          </Button>
+          <p className="min-h-4 text-xs text-muted-foreground" aria-live="polite">
+            {shareStatus === "copied"
+              ? "Link copied to clipboard"
+              : shareStatus === "shared"
+                ? "Share sheet opened"
+                : shareStatus === "error"
+                  ? "Could not share link"
+                  : ""}
+          </p>
+        </div>
       </div>
 
       {/* Main Result */}
