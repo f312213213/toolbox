@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -15,7 +15,6 @@ import {
   subDays,
   max as dateMax,
   min as dateMin,
-  addDays,
   startOfDay,
   isBefore,
   isAfter,
@@ -25,6 +24,11 @@ interface Trip {
   id: string
   entry: Date
   exit: Date
+}
+
+interface TripDateEditorProps {
+  trip: Trip
+  onChange: (id: string, entry: Date, exit: Date) => void
 }
 
 const STORAGE_KEY = "schengen-trips"
@@ -73,6 +77,78 @@ function tripDaysInWindow(trip: Trip, refDate: Date): number {
   return differenceInCalendarDays(overlapEnd, overlapStart) + 1
 }
 
+function TripDateEditor({ trip, onChange }: TripDateEditorProps) {
+  const [open, setOpen] = useState(false)
+  const entryLabelId = useId()
+  const exitLabelId = useId()
+  const duration = differenceInCalendarDays(trip.exit, trip.entry) + 1
+  const formattedEntry = format(trip.entry, "MMM d, yyyy")
+  const formattedExit = format(trip.exit, "MMM d, yyyy")
+
+  const updateEntry = (date?: Date) => {
+    if (!date) return
+    const nextEntry = startOfDay(date)
+    const nextExit = isBefore(trip.exit, nextEntry) ? nextEntry : trip.exit
+    onChange(trip.id, nextEntry, nextExit)
+  }
+
+  const updateExit = (date?: Date) => {
+    if (!date) return
+    onChange(trip.id, trip.entry, startOfDay(date))
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 justify-start px-1.5 text-sm font-normal"
+          aria-label={`Edit trip dates from ${formattedEntry} to ${formattedExit}`}
+        >
+          <CalendarIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <span className="font-medium">{formattedEntry}</span>
+          <span className="text-muted-foreground" aria-hidden="true">→</span>
+          <span className="font-medium">{formattedExit}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p id={entryLabelId} className="text-xs font-medium">Entry Date</p>
+            <Calendar
+              mode="single"
+              selected={trip.entry}
+              defaultMonth={trip.entry}
+              onSelect={updateEntry}
+              aria-labelledby={entryLabelId}
+              initialFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <p id={exitLabelId} className="text-xs font-medium">Exit Date</p>
+            <Calendar
+              mode="single"
+              selected={trip.exit}
+              defaultMonth={trip.exit}
+              onSelect={updateExit}
+              disabled={(date) => isBefore(date, trip.entry)}
+              aria-labelledby={exitLabelId}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t pt-3">
+          <p className="text-xs text-muted-foreground">{duration} days</p>
+          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+            Done
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function SchengenPage() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [newEntry, setNewEntry] = useState<Date | undefined>(undefined)
@@ -112,6 +188,34 @@ export default function SchengenPage() {
     )
     setNewEntry(undefined)
     setNewExit(undefined)
+  }
+
+  const selectNewEntry = (date?: Date) => {
+    if (!date) return
+    const nextEntry = startOfDay(date)
+    setNewEntry(nextEntry)
+    if (newExit && isBefore(newExit, nextEntry)) {
+      setNewExit(nextEntry)
+    }
+    setEntryOpen(false)
+  }
+
+  const selectNewExit = (date?: Date) => {
+    if (!date) return
+    setNewExit(startOfDay(date))
+    setExitOpen(false)
+  }
+
+  const updateTripDates = (id: string, entry: Date, exit: Date) => {
+    const nextEntry = startOfDay(entry)
+    const nextExit = startOfDay(exit)
+    if (isAfter(nextEntry, nextExit)) return
+
+    setTrips((prev) =>
+      prev
+        .map((trip) => (trip.id === id ? { ...trip, entry: nextEntry, exit: nextExit } : trip))
+        .sort((a, b) => a.entry.getTime() - b.entry.getTime())
+    )
   }
 
   const removeTrip = (id: string) => setTrips((prev) => prev.filter((t) => t.id !== id))
@@ -211,7 +315,13 @@ export default function SchengenPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={newEntry} onSelect={(date) => { if (date) setNewEntry(date); setEntryOpen(false) }} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={newEntry}
+                    defaultMonth={newEntry}
+                    onSelect={selectNewEntry}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -225,7 +335,14 @@ export default function SchengenPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={newExit} onSelect={(date) => { if (date) setNewExit(date); setExitOpen(false) }} disabled={newEntry ? (d) => isBefore(d, newEntry) : undefined} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={newExit}
+                    defaultMonth={newExit ?? newEntry}
+                    onSelect={selectNewExit}
+                    disabled={newEntry ? (d) => isBefore(d, newEntry) : undefined}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -257,11 +374,7 @@ export default function SchengenPage() {
                 <Card key={trip.id} size="sm">
                   <CardContent className="flex items-center justify-between gap-3 py-3">
                     <div className="flex items-center gap-3 min-w-0 flex-wrap">
-                      <div className="text-sm whitespace-nowrap">
-                        <span className="font-medium">{format(trip.entry, "MMM d, yyyy")}</span>
-                        <span className="text-muted-foreground mx-1.5">→</span>
-                        <span className="font-medium">{format(trip.exit, "MMM d, yyyy")}</span>
-                      </div>
+                      <TripDateEditor trip={trip} onChange={updateTripDates} />
                       <Badge variant={isExpired ? "outline" : "default"} className="shrink-0">
                         {counted > 0 ? `${counted}d counted` : `${duration}d`}
                       </Badge>
@@ -272,8 +385,13 @@ export default function SchengenPage() {
                         <Badge variant="outline" className="shrink-0 text-muted-foreground">expired</Badge>
                       )}
                     </div>
-                    <Button variant="ghost" size="icon-xs" onClick={() => removeTrip(trip.id)}>
-                      <Trash2 className="size-3.5" />
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => removeTrip(trip.id)}
+                      aria-label={`Remove trip from ${format(trip.entry, "MMM d, yyyy")} to ${format(trip.exit, "MMM d, yyyy")}`}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
                     </Button>
                   </CardContent>
                 </Card>
