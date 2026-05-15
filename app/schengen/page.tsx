@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useId } from "react"
+import { Suspense, useState, useEffect, useId } from "react"
 import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,7 @@ import {
   startOfDay,
   isBefore,
   isAfter,
+  isValid,
 } from "date-fns"
 
 interface Trip {
@@ -32,9 +34,80 @@ interface TripDateEditorProps {
 }
 
 const STORAGE_KEY = "schengen-trips"
+const TRIPS_QUERY_KEY = "trips"
+const DATE_PARAM_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9)
+}
+
+function sortTrips(trips: Trip[]): Trip[] {
+  return [...trips].sort((a, b) => a.entry.getTime() - b.entry.getTime())
+}
+
+function formatDateParam(date: Date): string {
+  return format(startOfDay(date), "yyyy-MM-dd")
+}
+
+function parseDateParam(value: string): Date | undefined {
+  const match = DATE_PARAM_PATTERN.exec(value)
+  if (!match) return undefined
+
+  const [, year, month, day] = match
+  const date = startOfDay(new Date(Number(year), Number(month) - 1, Number(day)))
+  return isValid(date) && formatDateParam(date) === value ? date : undefined
+}
+
+function parseTripsParam(value: string): Trip[] {
+  if (!value.trim()) return []
+
+  const trips: Trip[] = []
+  for (const [index, range] of value.split(",").entries()) {
+    const [entryValue, exitValue, extra] = range.split("_")
+    if (!entryValue || !exitValue || extra !== undefined) continue
+
+    const entry = parseDateParam(entryValue)
+    const exit = parseDateParam(exitValue)
+    if (!entry || !exit || isAfter(entry, exit)) continue
+
+    trips.push({
+      id: `${entryValue}-${exitValue}-${index}`,
+      entry,
+      exit,
+    })
+  }
+
+  return sortTrips(trips)
+}
+
+function serializeTripsParam(trips: Trip[]): string {
+  return sortTrips(trips)
+    .map((trip) => `${formatDateParam(trip.entry)}_${formatDateParam(trip.exit)}`)
+    .join(",")
+}
+
+function parseStoredTrips(saved: string | null): Trip[] {
+  if (!saved) return []
+
+  try {
+    const parsed: { id: string; entry: string; exit: string }[] = JSON.parse(saved)
+    return sortTrips(
+      parsed
+        .map((trip) => {
+          const entry = startOfDay(new Date(trip.entry))
+          const exit = startOfDay(new Date(trip.exit))
+
+          return {
+            id: trip.id || generateId(),
+            entry,
+            exit,
+          }
+        })
+        .filter((trip) => isValid(trip.entry) && isValid(trip.exit) && !isAfter(trip.entry, trip.exit))
+    )
+  } catch {
+    return []
+  }
 }
 
 /** Count days from trips within the 180-day window ending on refDate. */
@@ -150,41 +223,70 @@ function TripDateEditor({ trip, onChange }: TripDateEditorProps) {
 }
 
 export default function SchengenPage() {
+  return (
+    <Suspense fallback={null}>
+      <SchengenCalculator />
+    </Suspense>
+  )
+}
+
+function SchengenCalculator() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [trips, setTrips] = useState<Trip[]>([])
   const [newEntry, setNewEntry] = useState<Date | undefined>(undefined)
   const [newExit, setNewExit] = useState<Date | undefined>(undefined)
   const [entryOpen, setEntryOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
   const [today, setToday] = useState<Date>(new Date("2024-01-01"))
+  const [isTripsHydrated, setIsTripsHydrated] = useState(false)
 
   useEffect(() => {
+    if (isTripsHydrated) return
+
     setToday(startOfDay(new Date()))
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed: { id: string; entry: string; exit: string }[] = JSON.parse(saved)
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setTrips(
-          parsed.map((t) => ({ id: t.id, entry: new Date(t.entry), exit: new Date(t.exit) }))
-        )
-      } catch { /* ignore */ }
-    }
-  }, [])
+    const tripsParam = searchParams.get(TRIPS_QUERY_KEY)
+    const initialTrips = tripsParam === null
+      ? parseStoredTrips(localStorage.getItem(STORAGE_KEY))
+      : parseTripsParam(tripsParam)
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTrips(initialTrips)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsTripsHydrated(true)
+  }, [isTripsHydrated, searchParams])
 
   useEffect(() => {
+    if (!isTripsHydrated) return
+
     if (trips.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(trips.map((t) => ({ id: t.id, entry: t.entry.toISOString(), exit: t.exit.toISOString() }))))
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
-  }, [trips])
+
+    const nextTripsParam = serializeTripsParam(trips)
+    const nextSearchParams = new URLSearchParams(searchParams.toString())
+    if (nextTripsParam) {
+      nextSearchParams.set(TRIPS_QUERY_KEY, nextTripsParam)
+    } else {
+      nextSearchParams.delete(TRIPS_QUERY_KEY)
+    }
+
+    const nextQuery = nextSearchParams.toString()
+    const currentQuery = window.location.search.slice(1)
+    if (nextQuery !== currentQuery) {
+      router.replace(`${pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`, {
+        scroll: false,
+      })
+    }
+  }, [isTripsHydrated, pathname, router, searchParams, trips])
 
   const addTrip = () => {
     if (!newEntry || !newExit || isAfter(newEntry, newExit)) return
     setTrips((prev) =>
-      [...prev, { id: generateId(), entry: startOfDay(newEntry), exit: startOfDay(newExit) }].sort(
-        (a, b) => a.entry.getTime() - b.entry.getTime()
-      )
+      sortTrips([...prev, { id: generateId(), entry: startOfDay(newEntry), exit: startOfDay(newExit) }])
     )
     setNewEntry(undefined)
     setNewExit(undefined)
@@ -212,9 +314,7 @@ export default function SchengenPage() {
     if (isAfter(nextEntry, nextExit)) return
 
     setTrips((prev) =>
-      prev
-        .map((trip) => (trip.id === id ? { ...trip, entry: nextEntry, exit: nextExit } : trip))
-        .sort((a, b) => a.entry.getTime() - b.entry.getTime())
+      sortTrips(prev.map((trip) => (trip.id === id ? { ...trip, entry: nextEntry, exit: nextExit } : trip)))
     )
   }
 
